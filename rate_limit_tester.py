@@ -15,7 +15,7 @@ async def main(url, nb_requests):
         status = await asyncio.gather(*task)
         for code in status:
             if code == HTTPStatus.TOO_MANY_REQUESTS:
-                print("The requested website is request limiting")
+                print("The requested website is rate limiting")
                 return
             if code != HTTPStatus.OK:
                 print(f"Received a non OK status {code}")
