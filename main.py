@@ -1,67 +1,71 @@
 import sys
 import re
 from urllib.parse import urlparse
-from pprint import pprint
 import asyncio
 import aiohttp
 import traceback
+from http import HTTPStatus 
 
-paths_reg = r"\"\/[^\/][^\"\>\<]+\""
-file_links_reg = r"\"https?:\/\/[^\"\.]+\.[a-b]+\""
-host_links_reg
+paths_reg = r"\"\/[^\"\>\<\.]+(?:\.js|\.json)?\""
 
-async def get_host_link(url, session):
-    async with session.get(url) as response:
-        html = await response.text()
-        return re.findall(host_links_reg, html)
+requested_url = set([])
+
+def clean_arr_string(arr):
+    return [string.replace("\"", "") for string in arr]
+
+def already_visited(url):
+    if url in requested_url:
+        return True
+    requested_url.add(url)
+    return False
 
 async def crawl(url, session):
     async with session.get(url) as response:
+        if response.status != HTTPStatus.OK:
+            return []
         html = await response.text()
         # differents paths 
-        host_links = re.findall(host_links_reg, html)
-        # links to files
-        file_links = re.findall(file_links_reg, html)
+        host_links = clean_arr_string(re.findall(host_links_reg, html))
         # possibles paths of host
-        paths = re.findall(paths_reg, html)
+        paths = clean_arr_string(re.findall(paths_reg, html))
+
+        possibles_urls = host_links + [url + path[1:] for path in paths]
+
+        print(f"found {len(possibles_urls)} possible url for {url}")
 
         tasks = []
-        for file_link in file_links:
-            tasks.append(get_host_link(file_link, session))
-        host_links = host_links + [item for sublist in await asyncio.gather(*tasks, return_exceptions=True) for item in sublist]
+        for possible_url in possibles_urls:
+            if not already_visited(possible_url):
+                tasks.append(crawl(possible_url, session))
 
-        tasks = []
-        for host_link in host_links:
-            tasks.append(crawl(host_link, session))
-        res = await asyncio.gather(*tasks, return_exceptions=True)
-        [host_links, paths] = [set(host_links) | set([a for [a,_] in res]), set(paths) | set([b for [_,b] in res])]
-        # possible path for same host, to be tested
+        gather_res = await asyncio.gather(*tasks, return_exceptions=True)
+        res = [item for sublist in gather_res if type(sublist) == list for item in sublist]
+        res.append(url)
 
-        return [list(host_links), list(paths)]
+        return res
 
-async def get_paths(url):
-    async with aiohttp.SessionClient() as session:
-        await crawl(url, session)
+async def main(url):
+    netloc = urlparse(url).netloc
 
-def main():
+    # link with same netloc
+    global host_links_reg
+    host_links_reg = rf"\"https?:\/\/{netloc}[^\"\.]+(?:\.json|\.js)?\""
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            res = await crawl(url, session)
+            with open(f"{netloc}.txt", "w") as file:
+                file.write("\n".join(res))
+        except Exception:
+            print(f"crawler failed :")
+            traceback.print_exc()
+
+if __name__ == "__main__":
     if len(sys.argv) == 1:
-        print("supply of a website url is mandatory")
+        print("command should look like:")
+        print("python3 main.py <url>")
         sys.exit(1)
     url = sys.argv[1]
 
-    global host_links_reg
-    host_links_reg = rf"\"https?:\/\/{urlparse(url).netloc}[^\"]+\""
-    event_loop = asyncio.get_event_loop()
-
-    try:
-        with aiohttp.ClientSession() as session:
-            [links, possible_links] = event_loop.run_until_complete(crawl(url, session))
-            pprint(links, possible_links)
-    except Exception as e:
-        print(f"crawler failed :")
-        traceback.print_exc()
-    finally:
-        event_loop.close()
-
-if __name__ == "__main__":
-    main()
+    event_loop = asyncio.new_event_loop()
+    event_loop.run_until_complete(main(url))
