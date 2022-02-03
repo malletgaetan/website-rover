@@ -1,5 +1,5 @@
 # website-rover
-Lightweight python script that try to discover every route of a website, backend or frontend generated, without any browser driver
+Lightweight script that try to discover every route of a website, backend or frontend generated, without any browser driver
 
 ## how to use
 Currently script is a its simplest, some enhancement are to come.
