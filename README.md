@@ -22,6 +22,8 @@ But you can test if a website is actually rate limiting by running:
 python3 rate_limit_tester.py https://<url>
 ```
 
+In the case the script tells you that he's actually getting rate limited, then this tools can't help you at this time ¯\_(ツ)_/¯
+
 ## enhancements
 
 - [ ] support custom HTTP headers (authentication website)
