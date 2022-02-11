@@ -1,4 +1,5 @@
 import sys
+import json
 import re
 from urllib.parse import urlparse
 import asyncio
@@ -7,7 +8,7 @@ import traceback
 from http import HTTPStatus 
 
 paths_reg = r"\"\/[^\"\>\<\.]+(?:\.js|\.json)?\""
-
+is_good_url = r"https?://[a-zA-Z0-9.-:]+/"
 requested_url = set([])
 
 def clean_arr_string(arr):
@@ -20,7 +21,7 @@ def already_visited(url):
     return False
 
 async def crawl(url, session):
-    async with session.get(url) as response:
+    async with session.get(url, headers=headers) as response:
         if response.status != HTTPStatus.OK:
             return []
         html = await response.text()
@@ -29,9 +30,7 @@ async def crawl(url, session):
         # possibles paths of host
         paths = clean_arr_string(re.findall(paths_reg, html))
 
-        possibles_urls = host_links + [url + path[1:] for path in paths]
-
-        print(f"found {len(possibles_urls)} possible url for {url}")
+        possibles_urls = host_links + [basic_url + path[1:] for path in paths]
 
         tasks = []
         for possible_url in possibles_urls:
@@ -45,20 +44,19 @@ async def crawl(url, session):
         return res
 
 async def main(url):
+    if not re.match(is_good_url, url):
+        raise Exception(f"bad format url, should be {is_good_url}")
     netloc = urlparse(url).netloc
 
-    # link with same netloc
-    global host_links_reg
-    host_links_reg = rf"\"https?:\/\/{netloc}[^\"\.]+(?:\.json|\.js)?\""
+    global basic_url, host_links_reg, headers
+    host_links_reg, basic_url = rf"\"https?:\/\/{netloc}[^\"\.]+(?:\.json|\.js)?\"", url
+    with open("custom_headers.py", "r") as file:
+        headers = json.loads(file.readlines())
 
     async with aiohttp.ClientSession() as session:
-        try:
-            res = await crawl(url, session)
-            with open(f"{netloc}.txt", "w") as file:
-                file.write("\n".join(res))
-        except Exception:
-            print(f"crawler failed :")
-            traceback.print_exc()
+        res = await crawl(url, session)
+        with open(f"{netloc}.txt", "w") as file:
+            file.write("\n".join(res))
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
@@ -68,4 +66,8 @@ if __name__ == "__main__":
     url = sys.argv[1]
 
     event_loop = asyncio.new_event_loop()
-    event_loop.run_until_complete(main(url))
+    try:
+        event_loop.run_until_complete(main(url))
+    except Exception:
+        print(f"R2D2 failed :")
+        traceback.print_exc()

@@ -26,8 +26,6 @@ In the case the script tells you that he's actually getting rate limited, then t
 
 ## enhancements
 
-- [ ] support custom HTTP headers (authentication website)
-- [ ] add browser headers
-- [ ] handle rate limiting
+- [x] support custom HTTP headers (authentication website)
+- [x] add browser headers
 - [ ] handle list of proxies
-- [ ] options to handle when a url should be taged as "valid" and added to list (responding to GET request, being referenced)
