@@ -43,6 +43,15 @@ async def crawl(url, session):
 
         return res
 
+def logic_order(base, results_arr):
+    res = []
+    for path in results_arr:
+        zoi = path.split("/")[3:]
+        res.append("/".join(zoi))
+    res.sort()
+    res = [base + el for el in res]
+    return res
+
 async def main(url):
     if not re.match(is_good_url, url):
         raise Exception(f"bad format url, should be {is_good_url}")
@@ -50,11 +59,12 @@ async def main(url):
 
     global basic_url, host_links_reg, headers
     host_links_reg, basic_url = rf"\"https?:\/\/{netloc}[^\"\.]+(?:\.json|\.js)?\"", url
-    with open("custom_headers.py", "r") as file:
-        headers = json.loads(file.readlines())
+    with open("custom_headers.json", "r") as file:
+        headers = json.loads("".join(file.readlines()))
 
     async with aiohttp.ClientSession() as session:
         res = await crawl(url, session)
+        res = logic_order(url, res)
         with open(f"{netloc}.txt", "w") as file:
             file.write("\n".join(res))
 

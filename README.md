@@ -1,5 +1,5 @@
 # website-rover
-Lightweight script that try to discover every route of a website, backend or frontend generated, without any browser driver
+Lightweight script that try to discover every route of a website, backend or frontend generated, without browser driver
 
 ## how to use
 Currently script is a its simplest, some enhancement are to come.
@@ -24,8 +24,13 @@ python3 rate_limit_tester.py https://<url>
 
 In the case the script tells you that he's actually getting rate limited, then this tools can't help you at this time ¯\_(ツ)_/¯
 
+## authentication
+
+If we a website you want to rover need authentication, add custom headers in the custom_headers file, these are added to each requests
+
 ## enhancements
 
 - [x] support custom HTTP headers (authentication website)
 - [x] add browser headers
 - [ ] handle list of proxies
+- [x] results should be in logic order
